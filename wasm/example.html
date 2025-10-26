@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K2pdfopt WebAssembly Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .control-group {
+            margin: 15px 0;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 100px;
+            padding: 5px;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>K2pdfopt WebAssembly Demo</h1>
+    
+    <div id="status" class="status">
+        Loading WebAssembly module...
+    </div>
+
+    <div id="controls" style="display: none;">
+        <h2>PDF Optimization Settings</h2>
+        
+        <div class="control-group">
+            <label>Input PDF:</label>
+            <input type="file" id="inputFile" accept=".pdf">
+        </div>
+
+        <div class="control-group">
+            <label>Device Type:</label>
+            <select id="device">
+                <option value="kv">Kindle (kv)</option>
+                <option value="dx">Kindle DX (dx)</option>
+                <option value="k2">Kindle 2 (k2)</option>
+                <option value="kindle">Kindle (kindle)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Width (pixels):</label>
+            <input type="number" id="width" value="600" min="100" max="2000">
+        </div>
+
+        <div class="control-group">
+            <label>Height (pixels):</label>
+            <input type="number" id="height" value="800" min="100" max="2000">
+        </div>
+
+        <div class="control-group">
+            <label>Quality (1-3):</label>
+            <input type="number" id="quality" value="2" min="1" max="3">
+        </div>
+
+        <div class="control-group">
+            <button id="processBtn" disabled>Process PDF</button>
+            <button id="downloadBtn" style="display: none;">Download Result</button>
+        </div>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+        let Module = null;
+        let processedData = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'status') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // Load the WASM module
+        log('Loading k2pdfopt WebAssembly module...');
+        createK2pdfoptModule().then(function(mod) {
+            Module = mod;
+            log('✓ WASM module loaded successfully');
+            
+            // Initialize the library
+            const result = Module.ccall('k2pdfopt_wasm_init', 'number', [], []);
+            if (result === 0) {
+                log('✓ k2pdfopt initialized');
+                updateStatus('Ready to process PDFs', 'success');
+                document.getElementById('controls').style.display = 'block';
+                
+                // Get version
+                const versionPtr = Module.ccall('k2pdfopt_wasm_version', 'string', [], []);
+                if (versionPtr) {
+                    log(`Version: ${versionPtr}`);
+                }
+            } else {
+                log('✗ Failed to initialize k2pdfopt');
+                updateStatus('Initialization failed', 'error');
+            }
+        }).catch(function(err) {
+            log(`✗ Error loading WASM module: ${err}`);
+            updateStatus('Failed to load WebAssembly module', 'error');
+            console.error(err);
+        });
+
+        // Handle file selection
+        document.getElementById('inputFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                log(`Selected file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+                document.getElementById('processBtn').disabled = false;
+            }
+        });
+
+        // Handle process button
+        document.getElementById('processBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('inputFile');
+            const file = fileInput.files[0];
+            
+            if (!file || !Module) {
+                log('✗ No file selected or module not loaded');
+                return;
+            }
+
+            try {
+                document.getElementById('processBtn').disabled = true;
+                log('Reading input file...');
+                
+                // Read file into memory
+                const arrayBuffer = await file.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                // Write file to virtual filesystem
+                const inputPath = '/input.pdf';
+                const outputPath = '/output.pdf';
+                Module.FS.writeFile(inputPath, uint8Array);
+                log(`✓ Input file written to virtual filesystem (${uint8Array.length} bytes)`);
+
+                // Set parameters
+                const device = document.getElementById('device').value;
+                const width = parseInt(document.getElementById('width').value);
+                const height = parseInt(document.getElementById('height').value);
+                const quality = parseInt(document.getElementById('quality').value);
+
+                log(`Setting device: ${device}`);
+                Module.ccall('k2pdfopt_wasm_set_device', 'number', ['string'], [device]);
+                
+                log(`Setting dimensions: ${width}x${height}`);
+                Module.ccall('k2pdfopt_wasm_set_width', 'number', ['number'], [width]);
+                Module.ccall('k2pdfopt_wasm_set_height', 'number', ['number'], [height]);
+                
+                log(`Setting quality: ${quality}`);
+                Module.ccall('k2pdfopt_wasm_set_quality', 'number', ['number'], [quality]);
+
+                // Process the file
+                log('Processing PDF... (this may take a while)');
+                updateStatus('Processing PDF...', 'status');
+                
+                const result = Module.ccall('k2pdfopt_wasm_process_file', 'number', 
+                    ['string', 'string'], [inputPath, outputPath]);
+                
+                if (result === 0) {
+                    log('✓ PDF processed successfully');
+                    
+                    // Read output file
+                    try {
+                        const outputData = Module.FS.readFile(outputPath);
+                        processedData = new Blob([outputData], { type: 'application/pdf' });
+                        log(`✓ Output file ready (${outputData.length} bytes)`);
+                        updateStatus('Processing complete!', 'success');
+                        document.getElementById('downloadBtn').style.display = 'inline-block';
+                    } catch (e) {
+                        log(`✗ Error reading output file: ${e.message}`);
+                        updateStatus('Error reading output', 'error');
+                    }
+                    
+                    // Clean up virtual filesystem
+                    Module.FS.unlink(inputPath);
+                    try {
+                        Module.FS.unlink(outputPath);
+                    } catch (e) {
+                        // Output file might not exist if processing failed
+                    }
+                } else {
+                    log(`✗ Processing failed with code: ${result}`);
+                    updateStatus('Processing failed', 'error');
+                }
+            } catch (err) {
+                log(`✗ Error: ${err.message}`);
+                updateStatus('Error occurred', 'error');
+                console.error(err);
+            } finally {
+                document.getElementById('processBtn').disabled = false;
+            }
+        });
+
+        // Handle download button
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (processedData) {
+                const url = URL.createObjectURL(processedData);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'output_optimized.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                log('✓ Download initiated');
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (Module) {
+                Module.ccall('k2pdfopt_wasm_cleanup', null, [], []);
+            }
+        });
+    </script>
+
+    <script src="k2pdfopt_wasm.js"></script>
+</body>
+</html>

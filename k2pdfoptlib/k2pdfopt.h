@@ -684,7 +684,7 @@ typedef struct
 */
 typedef struct
     {
-#if 0
+#if 1
     char srcfilename[MAXFILENAMELEN];
     char ocrfilename[MAXFILENAMELEN];
     int outline_srcpage_completed; /* Which source page was last checked in the outline */
@@ -719,7 +719,7 @@ typedef struct
     int bgcolor;
     int fit_to_page;
     int wordcount;
-#if 0
+#if 1
     /* v2.42 for bitmap output and improved autocrop */
     int output_page_count;  /* Count in output file */
     int filecount;

@@ -160,7 +160,7 @@ typedef double  real;
 #endif
 
 #undef NEEDSTRICMP
-#if (!defined(MSDOS) && !defined(DJEMX) && !defined(_MSC_VER) && !defined(CYGWIN32) && !defined(__DMC__) && !defined(__LCC__) && !defined(__WATCOMC__) && !defined(__BORLANDC__) && !defined(__MINGW32__) && !defined(__TINYC__))
+#if (!defined(MSDOS) && !defined(DJEMX) && !defined(_MSC_VER) && !defined(CYGWIN32) && !defined(__DMC__) && !defined(__LCC__) && !defined(__WATCOMC__) && !defined(__BORLANDC__) && !defined(__MINGW32__) && !defined(__TINYC__) && !defined(__EMSCRIPTEN__))
 #define NEEDSTRICMP
 #endif
 
@@ -359,6 +359,13 @@ typedef double  real;
 #include <string.h>
 #include <time.h>
 #include <stdarg.h>
+
+/* Emscripten compatibility */
+#ifdef __EMSCRIPTEN__
+#include <strings.h>
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+#endif
 
 #define MAXFILENAMELEN 512
 /*
