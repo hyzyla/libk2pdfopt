@@ -12,7 +12,7 @@ endif()
 # Simplified build - no external dependencies for minimal WASM build
 # This creates a minimal k2pdfopt that can work with basic PDFs
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_CMAKE -DK2PDFOPT_KINDLEPDFVIEWER")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_CMAKE")
 
 # Disable third-party libraries for minimal build
 # This reduces WASM size and avoids dependency issues
@@ -40,6 +40,12 @@ configure_file(
 
 # Build willus library
 file(GLOB WILLUS_SOURCES "../willuslib/*.c")
+# Exclude OCR-specific files that require external dependencies
+list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/ocrtess\\.c$")
+list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/ocrgocr\\.c$")
+# Exclude PDF/DJVU specific files that require external dependencies
+list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/bmpmupdf\\.c$")
+list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/bmpdjvu\\.c$")
 add_library(willuslib ${WILLUS_SOURCES})
 
 # Build k2pdfopt library
@@ -61,7 +67,6 @@ set_target_properties(k2pdfopt_wasm PROPERTIES
         -s EXPORT_NAME='createK2pdfoptModule' \
         -s FILESYSTEM=1 \
         -s INITIAL_MEMORY=67108864 \
-        -s STACK_SIZE=5242880 \
         -s ENVIRONMENT='web,worker' \
         -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
         --no-entry"

@@ -5,3 +5,4 @@
 leptonica-1.69
 tesseract-ocr
 *.swp
+wasm/build/

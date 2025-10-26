@@ -17,6 +17,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* External version string from k2version.c */
+extern char *k2pdfopt_version;
+
 static K2PDFOPT_CONVERSION k2conv;
 static K2PDFOPT_SETTINGS *k2settings = NULL;
 static int initialized = 0;
@@ -60,21 +63,30 @@ void k2pdfopt_wasm_cleanup(void) {
  */
 EMSCRIPTEN_KEEPALIVE
 const char* k2pdfopt_wasm_version(void) {
-    return K2PDFOPT_VERSION;
+    return k2pdfopt_version;
 }
 
 /**
- * Set output device type
- * device: device name string (e.g., "kindle", "kv", "dx")
+ * Set output device type using device profile
+ * device: device name string (e.g., "kindle", "kv", "dx", "k2")
  */
 EMSCRIPTEN_KEEPALIVE
 int k2pdfopt_wasm_set_device(const char* device) {
+    DEVPROFILE *dp;
+    
     if (!initialized || !device) {
         return -1;
     }
     
-    strncpy(k2settings->device, device, 31);
-    k2settings->device[31] = '\0';
+    dp = devprofile_get(device);
+    if (dp == NULL) {
+        return -1;
+    }
+    
+    if (!k2pdfopt_settings_set_to_device(k2settings, dp)) {
+        return -1;
+    }
+    
     return 0;
 }
 
@@ -89,6 +101,7 @@ int k2pdfopt_wasm_set_width(int width) {
     
     k2settings->dst_userwidth = width;
     k2settings->dst_userwidth_units = UNITS_PIXELS;
+    k2settings->dst_width = width;
     return 0;
 }
 
@@ -103,11 +116,13 @@ int k2pdfopt_wasm_set_height(int height) {
     
     k2settings->dst_userheight = height;
     k2settings->dst_userheight_units = UNITS_PIXELS;
+    k2settings->dst_height = height;
     return 0;
 }
 
 /**
- * Set margin values (in inches)
+ * Set margin values (in inches) - Note: margin API is not currently exposed by k2pdfopt
+ * This function is a placeholder for future implementation
  */
 EMSCRIPTEN_KEEPALIVE
 int k2pdfopt_wasm_set_margins(double left, double top, double right, double bottom) {
@@ -115,11 +130,9 @@ int k2pdfopt_wasm_set_margins(double left, double top, double right, double bott
         return -1;
     }
     
-    k2settings->mar_left = left;
-    k2settings->mar_top = top;
-    k2settings->mar_right = right;
-    k2settings->mar_bot = bottom;
-    return 0;
+    /* Margins are handled differently in the current k2pdfopt API  */
+    /* For now, use autocrop or manual cropping settings */
+    return -1; /* Not implemented */
 }
 
 /**
