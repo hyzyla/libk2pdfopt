@@ -154,9 +154,9 @@ int k2pdfopt_wasm_process_file(const char* input_file, const char* output_file) 
     k2listproc.filecount = 0;
     k2listproc.mode = K2PDFOPT_FILELIST_PROCESS_MODE_CONVERT_FILES;
     
-    /* Set output filename */
-    k2settings->dst_opname_format[0] = '\0';
-    strncat(k2settings->dst_opname_format, output_file, 255);
+    /* Set output filename - use snprintf for safety */
+    snprintf(k2settings->dst_opname_format, sizeof(k2settings->dst_opname_format), 
+             "%s", output_file);
     
     /* Process the file */
     k2pdfopt_proc_wildarg(k2settings, (char*)input_file, &k2listproc);
@@ -224,7 +224,7 @@ int k2pdfopt_wasm_set_page_range(const char* range) {
         return -1;
     }
     
-    strncpy(k2settings->pagelist, range, 1023);
-    k2settings->pagelist[1023] = '\0';
+    /* Use snprintf for safe copying - pagelist is 1024 bytes */
+    snprintf(k2settings->pagelist, sizeof(k2settings->pagelist), "%s", range);
     return 0;
 }
