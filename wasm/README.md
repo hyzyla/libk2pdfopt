@@ -28,6 +28,33 @@ This will:
 2. Compile the k2pdfopt library and all dependencies
 3. Generate `k2pdfopt_wasm.js` and `k2pdfopt_wasm.wasm` in the `wasm/build/` directory
 
+## Testing
+
+To validate the build configuration without requiring Emscripten:
+
+```bash
+./test_build.sh
+```
+
+This test script performs the following validations:
+- Checks for required files and directories
+- Validates CMakeLists.txt configuration
+- Verifies source file availability
+- Checks build script correctness
+- Validates documentation completeness
+
+If Emscripten is installed, you can test the actual build process:
+
+```bash
+./test_build.sh --build
+```
+
+The test script is useful for:
+- Validating the build configuration before installing Emscripten
+- Running in CI/CD pipelines
+- Debugging build issues
+- Ensuring all required files are present
+
 ## Output Files
 
 The build produces two files:
@@ -144,6 +171,16 @@ The WASM build:
 ### Customizing Dependencies
 
 By default, all external dependencies are disabled for a minimal WASM build. To enable specific dependencies, modify the `HAVE_*` variables in `wasm/CMakeLists.txt`. The build system will automatically include the corresponding source files when dependencies are enabled.
+
+## Continuous Integration
+
+The repository includes a GitHub Actions workflow (`.github/workflows/test-wasm-build.yml`) that automatically:
+1. Validates the build configuration on every push and pull request
+2. Runs the test suite to ensure all required files are present
+3. Builds the WASM module using Emscripten
+4. Uploads the built artifacts for inspection
+
+This ensures that changes to the build system are validated automatically.
 
 ## License
 
