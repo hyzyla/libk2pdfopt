@@ -179,7 +179,7 @@ fi
 
 ### For Validation Only
 - Bash shell
-- Basic Unix utilities (find, grep, wc, etc.)
+- Unix utilities: `find`, `grep`, `wc`, `cut`, `du`, `head`, `mkdir`, `ls`
 
 ### For Building
 - Emscripten SDK (latest version recommended)
@@ -193,8 +193,20 @@ fi
 chmod +x test_build.sh
 ```
 
-### False positives/negatives
-The test script is designed to be comprehensive but not overly strict. Some warnings are expected and don't necessarily indicate problems.
+### Expected warnings vs. problems
+The test script distinguishes between warnings and failures:
+
+**Expected warnings** (don't indicate problems):
+- `Emscripten not found` when running validation-only mode
+- `build_wasm.sh is not executable` (can be fixed with chmod +x)
+- Conditional source files not found when they're excluded by design
+
+**Actual failures** (indicate problems):
+- Required files missing (CMakeLists.txt, source files, etc.)
+- Configuration errors in CMakeLists.txt
+- Build script missing critical checks
+
+If you see a warning, check if it's in the expected list above. If not, it may indicate a real issue.
 
 ### CI workflow not triggering
 Check that your changes affect files listed in the workflow's `paths` configuration.
