@@ -131,10 +131,19 @@ This WASM build has the following limitations compared to the full k2pdfopt:
 
 The WASM build:
 - Compiles the core k2pdfopt library (`k2pdfoptlib`) and willus library (`willuslib`)
-- Excludes OCR-specific files (ocrtess.c, ocrgocr.c)
-- Excludes PDF/DJVU reader files that require external libraries (bmpmupdf.c, bmpdjvu.c)
+- Dynamically excludes source files based on disabled dependencies:
+  - When `HAVE_TESSERACT_LIB` is OFF: excludes `ocrtess.c`
+  - When `HAVE_GOCR_LIB` is OFF: excludes `ocrgocr.c`
+  - When `HAVE_MUPDF_LIB` is OFF: excludes `bmpmupdf.c`, `wmupdf.c`, `wmupdfinfo.c`
+  - When `HAVE_DJVU_LIB` is OFF: excludes `bmpdjvu.c`
+  - When `HAVE_LEPTONICA_LIB` is OFF: excludes `wleptonica.c`
+  - When `HAVE_GSL_LIB` is OFF: excludes `gslpolyfit.c`
 - Uses Emscripten's virtual filesystem for file I/O
 - Exports functions with `EMSCRIPTEN_KEEPALIVE` to make them accessible from JavaScript
+
+### Customizing Dependencies
+
+By default, all external dependencies are disabled for a minimal WASM build. To enable specific dependencies, modify the `HAVE_*` variables in `wasm/CMakeLists.txt`. The build system will automatically include the corresponding source files when dependencies are enabled.
 
 ## License
 
