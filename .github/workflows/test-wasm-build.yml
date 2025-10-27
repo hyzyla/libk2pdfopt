@@ -1,0 +1,107 @@
+name: Test WebAssembly Build
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'wasm/**'
+      - 'willuslib/**'
+      - 'k2pdfoptlib/**'
+      - 'build_wasm.sh'
+      - 'test_build.sh'
+      - '.github/workflows/test-wasm-build.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'wasm/**'
+      - 'willuslib/**'
+      - 'k2pdfoptlib/**'
+      - 'build_wasm.sh'
+      - 'test_build.sh'
+      - '.github/workflows/test-wasm-build.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate Build Configuration
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Run validation tests
+      run: |
+        chmod +x test_build.sh
+        ./test_build.sh --validate-only
+    
+    - name: Upload validation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validation-report
+        path: |
+          wasm/CMakeLists.txt
+          wasm/README.md
+          build_wasm.sh
+
+  build:
+    name: Build WebAssembly Module
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Emscripten
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: 'latest'
+        actions-cache-folder: 'emsdk-cache'
+    
+    - name: Verify Emscripten installation
+      run: |
+        emcc --version
+        which emcc
+    
+    - name: Run build tests
+      run: |
+        chmod +x test_build.sh
+        ./test_build.sh --build
+    
+    - name: Check build outputs
+      run: |
+        echo "Checking for WASM output files..."
+        ls -lh wasm/build/
+        if [ -f wasm/build/k2pdfopt_wasm.wasm ]; then
+          echo "✓ WASM file generated"
+          du -h wasm/build/k2pdfopt_wasm.wasm
+        else
+          echo "✗ WASM file not found"
+          exit 1
+        fi
+        if [ -f wasm/build/k2pdfopt_wasm.js ]; then
+          echo "✓ JS file generated"
+          du -h wasm/build/k2pdfopt_wasm.js
+        else
+          echo "✗ JS file not found"
+          exit 1
+        fi
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: wasm-build
+        path: |
+          wasm/build/k2pdfopt_wasm.wasm
+          wasm/build/k2pdfopt_wasm.js
+        retention-days: 7
+    
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: wasm/build/*.log
+        if-no-files-found: ignore
