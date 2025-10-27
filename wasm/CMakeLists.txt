@@ -16,11 +16,13 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_CMAKE")
 
 # Disable third-party libraries for minimal build
 # This reduces WASM size and avoids dependency issues
-# Don't define these - let config.h handle it based on CMake variables
+# To enable a dependency, set the corresponding HAVE_* variable to ON
+# For example: set(HAVE_MUPDF_LIB ON)
 
 include_directories(.. ../willuslib ../k2pdfoptlib "${PROJECT_BINARY_DIR}")
 
 # Set all HAVE_* variables to OFF for minimal build
+# Change these to ON to enable specific dependencies
 set(HAVE_Z_LIB OFF)
 set(HAVE_PNG_LIB OFF)
 set(HAVE_JPEG_LIB OFF)
