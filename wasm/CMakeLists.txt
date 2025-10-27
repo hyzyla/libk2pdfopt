@@ -40,12 +40,49 @@ configure_file(
 
 # Build willus library
 file(GLOB WILLUS_SOURCES "../willuslib/*.c")
-# Exclude OCR-specific files that require external dependencies
-list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/ocrtess\\.c$")
-list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/ocrgocr\\.c$")
-# Exclude PDF/DJVU specific files that require external dependencies
-list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/bmpmupdf\\.c$")
-list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/bmpdjvu\\.c$")
+
+# Dynamically exclude files based on disabled dependencies
+# This allows for flexible builds with different dependency configurations
+
+# Files that require TESSERACT_LIB (also needs LEPTONICA_LIB)
+# Note: ocrtess.c has unguarded includes and must be excluded when tesseract is disabled
+if(NOT HAVE_TESSERACT_LIB)
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/ocrtess\\.c$")
+    message(STATUS "Excluding ocrtess.c (TESSERACT_LIB disabled)")
+endif()
+
+# Files that require GOCR_LIB
+if(NOT HAVE_GOCR_LIB)
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/ocrgocr\\.c$")
+    message(STATUS "Excluding ocrgocr.c (GOCR_LIB disabled)")
+endif()
+
+# Files that require MUPDF_LIB
+if(NOT HAVE_MUPDF_LIB)
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/bmpmupdf\\.c$")
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/wmupdf\\.c$")
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/wmupdfinfo\\.c$")
+    message(STATUS "Excluding bmpmupdf.c, wmupdf.c, wmupdfinfo.c (MUPDF_LIB disabled)")
+endif()
+
+# Files that require DJVU_LIB
+if(NOT HAVE_DJVU_LIB)
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/bmpdjvu\\.c$")
+    message(STATUS "Excluding bmpdjvu.c (DJVU_LIB disabled)")
+endif()
+
+# Files that require LEPTONICA_LIB
+if(NOT HAVE_LEPTONICA_LIB)
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/wleptonica\\.c$")
+    message(STATUS "Excluding wleptonica.c (LEPTONICA_LIB disabled)")
+endif()
+
+# Files that require GSL_LIB
+if(NOT HAVE_GSL_LIB)
+    list(FILTER WILLUS_SOURCES EXCLUDE REGEX ".*/gslpolyfit\\.c$")
+    message(STATUS "Excluding gslpolyfit.c (GSL_LIB disabled)")
+endif()
+
 add_library(willuslib ${WILLUS_SOURCES})
 
 # Build k2pdfopt library
